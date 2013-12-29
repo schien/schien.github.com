@@ -21,6 +21,7 @@ Each XPCOM object is reference counted and provides `AddRef()` and `Release()` f
 Gecko introduces two smart pointer types with RAII features for maintaining the reference count easily.
 nsCOMPtr is probbaly the most common auto pointer in Gecko code base.
 It is used to hold a pointer of XPCOM interface type, e.g. `nsISupports`, so it will be used to upcast/downcast to other XPCOM interface via `do_QueryInteface()`
+`do_QueryObject()` is used to solve multiple inheritance casting problem while using `do_QueryInterface()` and it'll have extra code size overhead because of using template.
 
     class nsIBar : public nsISupports {...}; // an XPCOM interface declaration
     class nsFoo : public nsIBar {...}; // implement AddRef/Release/QueryInterfaces as an XPCOM object
@@ -41,20 +42,13 @@ It is used to hold a pointer of XPCOM interface type, e.g. `nsISupports`, so it 
 nsRefPtr
 --------
 nsRefPtr is used to hold a pointer for any type that implements `AddRef()` and `Release()`.
-It's usually used to hold a reference to a concrete type of XPCOM object.
-`do_QueryObject()` is used to solve multiple inheritance casting problem while using `do_QueryInterface` and I'll suggest to use it when every time you cast between nsCOMPtr and nsRefPtr.
-
-**Caution!** Casting a nsCOMPtr to nsRefPtr only success while the concrete type name is been added in the `QueryInterface()`.
+It's often used to hold a reference to a concrete type of XPCOM object.
 
     class Foo {
       NS_INLINE_DECL_REFCOUNTING(Foo) // helper for implementing AddRef/Release
     };
 
-    class nsBar : public nsISupports {...}; // an XPCOM interface declaration
-
     nsRefPtr<Foo> fooPtr = new Foo();
-    nsRefPtr<nsBar> barPtr = new nsBar();
-    nsCOMPtr<nsISupports> isupportPtr = do_QueryObject(barPtr);
 
     void someGetterFunction(Foo**); // function using output parameter.
     nsRefPtr<Foo> outputPtr;
