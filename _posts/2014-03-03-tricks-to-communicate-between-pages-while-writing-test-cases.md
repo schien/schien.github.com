@@ -7,7 +7,7 @@ tags: [mozilla, gecko, mochitest]
 ---
 {% include JB/setup %}
 
-Here are some techniques I've used while writing Gecko test cases. It's quit handy for people to create complicate test cases across multiple frames or processes.
+Here are some techniques I've used while writing Gecko test cases. It's quite handy for people to create complicate test cases across multiple frames or processes.
 
 To IFrame
 ---------
