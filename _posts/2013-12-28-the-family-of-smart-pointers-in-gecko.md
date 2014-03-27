@@ -20,7 +20,7 @@ Every class that implements `nsISupports` interface can be consider as an XPCOM 
 Each XPCOM object is reference counted and provides `AddRef()` and `Release()` for controlling the reference counting explictly.
 Gecko introduces two smart pointer types with RAII features for maintaining the reference count easily.
 nsCOMPtr is probbaly the most common auto pointer in Gecko code base.
-It is used to hold a pointer of XPCOM interface type, e.g. `nsISupports`, so it will be used to upcast/downcast to other XPCOM interface via `do_QueryInteface()`
+It is used to hold a pointer of XPCOM interface type, e.g. `nsISupports`, so it will be used to upcast/downcast to other XPCOM interface via `do_QueryInterface()`
 `do_QueryObject()` is used to solve multiple inheritance casting problem while using `do_QueryInterface()` and it'll have extra code size overhead because of using template.
 
     class nsIBar : public nsISupports {...}; // an XPCOM interface declaration
