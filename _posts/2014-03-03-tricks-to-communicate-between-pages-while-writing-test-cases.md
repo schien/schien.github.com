@@ -9,9 +9,9 @@ tags: [mozilla, gecko, mochitest]
 
 Here are some techniques I've used while writing Gecko test cases. It's quite handy for people to create complicate test cases across multiple frames or processes.
 
-To non-OOP IFrame
+To IFrame
 ---------
-[postMessage][1]: You can pass the message between iframes that not in the same origin, using `postMessage` and `addEventListener('message', callback)`.
+[postMessage][1]: You can pass the message between non-OOP iframes that not in the same origin, using `postMessage` and `addEventListener('message', callback)`.
 
 outer.html
 
