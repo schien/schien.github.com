@@ -115,7 +115,7 @@ inner.html
     window.addEventListener('hashchange', function() {
       var queryString = decodeURIComponent(window.location.hash.substring(1));
       // use JSON.parse(queryString) if passing a json string
-    }
+    });
 
 [1]: https://developer.mozilla.org/en-US/docs/Web/API/Window.postMessage
 [2]: http://en.wikipedia.org/wiki/Query_string
