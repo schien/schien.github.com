@@ -9,7 +9,7 @@ tags: [mozilla, gecko, mochitest]
 
 Here are some techniques I've used while writing Gecko test cases. It's quite handy for people to create complicate test cases across multiple frames or processes.
 
-To IFrame
+To non-OOP IFrame
 ---------
 [postMessage][1]: You can pass the message between iframes that not in the same origin, using `postMessage` and `addEventListener('message', callback)`.
 
@@ -101,6 +101,22 @@ inner.html
     window.alert('some string or json string');
     var retValue = window.prompt('some thing need return', 'some init value');
 
+To Child Process
+----------------
+[hashchange][9]: You can pass the information by changing the URL hash for the iframe, using [`encodeURIComponent`][3] and [`decodeURIComponent`][4].
+
+outer.html
+
+    var iframe = document.getElementById('iframe');
+    iframe.src = 'inner.html#' + encodeURIComponent('some string or json string');
+
+inner.html
+
+    window.addEventListener('hashchange', function() {
+      var queryString = decodeURIComponent(window.location.hash.substring(1));
+      // use JSON.parse(queryString) if passing a json string
+    }
+
 [1]: https://developer.mozilla.org/en-US/docs/Web/API/Window.postMessage
 [2]: http://en.wikipedia.org/wiki/Query_string
 [3]: https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/encodeURIComponent
@@ -109,3 +125,4 @@ inner.html
 [6]: https://developer.mozilla.org/en-US/docs/Web/API/window.alert
 [7]: https://developer.mozilla.org/en-US/docs/Web/API/window.prompt
 [8]: https://developer.mozilla.org/en-US/docs/Web/Reference/Events/mozbrowsershowmodalprompt
+[9]: https://developer.mozilla.org/en-US/docs/Web/API/Window.onhashchange
