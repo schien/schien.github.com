@@ -5,20 +5,23 @@ date:   2018-07-09 19:24:37 +0800
 categories: networking
 ---
 
+UDP
+---
+
 UDP is a simple message-based protocol defined in [RFC768][1], originally designed on top of IPv4.
 [RFC2460][2] ([RFC8200][3] for latest version) section 8.1 provides necessary modification for UDP over IPv6.
 
 ### What is defined:
--   header format:
+-   __header format__:
     each datagram will contains four fields in header: src port, dest port, data length, checksum.
--   number of ports can be used:
+-   __number of ports can be used__:
     The src/dest port in header is a 2-byte integer, which means there are 65536 ports can be used
     on a single IP address. This is not shared with TCP.
--   max length of a datagram:
+-   __max length of a datagram__:
     The length field in header is a 2-byte integer, which represents the total length of the
     datagram (including header). In this case, the maximum data can be send in one datagram
     is `65535-8` bytes.
--   chechsum algorithm:
+-   __chechsum algorithm__:
     a pseudo header is added to protect misrouted datagrams: src addr, dest addr,
     UDP protocol number, UDP length. Datagram will be discard if checksum validation failed, except
     if `0x0000` is specified in checksum field. `0x1111` is used if the computed checksum is `0x0000`.
@@ -74,18 +77,23 @@ For IPv6:
     +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
 
 ### What is not defined:
--   connection-less:
-    Doesn't define connection establishment procedure.
+-   __connection-less__:
+    Doesn't define connection establishment procedure, thus no multiplexing.
     Endpoint can send datagrams to designated remote IP/port directly.
--   receiving order is not guaranteed:
+-   __state-less__:
+    Doesn't define any state and event handling procedure like in TCP.
+-   __receiving order is not guaranteed__:
     Doesn't define sequence number in datagram. Datagram can arrived at receiver in any order.
--   message delivery is not guaranteed:
+-   __message delivery is not guaranteed__:
     Doesn't define message acknowledge procedure. Both sender and receiver will not know if there
     is a datagram dropped on the routing path.  ICMP error might be received by sender but the
     information will not propagate to UDP layer.
--   no flow control:
+-   __no flow/congestion control__:
     Doesn't define flow control / congestion control algorithm.
     Receiver and routers on the path will simply discard the datagram it cannot handle.
+-   __no encryption__:
+    Doesn't define data encryption mechanism.
+    The message in the datagram is clear text.
 
 UDP-Lite
 --------
