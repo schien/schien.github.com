@@ -1,11 +1,9 @@
 ---
 layout: post
 title: "The Family of Smart Pointers in Gecko"
-description: ""
-category: Something you should know
-tags: [mozilla, gecko, c++]
+date:   2013-12-28 00:00:00 +0800
+categories: mozilla gecko
 ---
-{% include JB/setup %}
 
 Using raw pointer correctly is always a nightmare for C/C++ developers. It's too easy to make mistakes, such as use-after-free and resource leakage.
 Auto pointer and share pointer were introduced to solve most of the problem, or at least to reveal the problem at early stage.

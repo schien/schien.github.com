@@ -1,11 +1,9 @@
 ---
 layout: post
 title: "Tricks to communicate between pages while writing test cases"
-description: ""
-category: "Something you should know"
-tags: [mozilla, gecko, mochitest]
+date:   2014-03-03 00:00:00 +0800
+categories: mozilla gecko
 ---
-{% include JB/setup %}
 
 Here are some techniques I've used while writing Gecko test cases. It's quite handy for people to create complicate test cases across multiple frames or processes.
 

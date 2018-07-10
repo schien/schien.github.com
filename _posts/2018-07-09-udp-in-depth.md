@@ -1,11 +1,9 @@
 ---
 layout: post
 title: "UDP in Depth"
-description: ""
-category: Computer Neworking
-tags: [udp, network, ietf]
+date:   2018-07-09 19:24:37 +0800
+categories: networking
 ---
-{% include JB/setup %}
 
 UDP is a simple message-based protocol defined in [RFC768][1], originally designed on top of IPv4.
 [RFC2460][2] ([RFC8200][3] for latest version) section 8.1 provides necessary modification for UDP over IPv6.
@@ -97,8 +95,8 @@ For UDP tunneling usecase, the tunneling protocol might defined their own data c
 Discarding the entire datagram will cancel the correction mechanism. Therefore, UDP-Lite [RFC3828][6] is
 introduced to allow application-specified data range for computing checksum.
 
-In POSIX Socket API, UDP-Lite socket can be create by specifying the protocol id [udplite][7]. The checksum data range
-is controlled via socket option `UDPLITE_SEND_CSCOV` and `UDPLITE_RECV_CSCOV`.
+In POSIX Socket API, UDP-Lite socket can be create by specifying the [UDPLite][7] protocol id.
+The checksum data range is controlled via socket option `UDPLITE_SEND_CSCOV` and `UDPLITE_RECV_CSCOV`.
 
     sockfd = socket(AF_INET, SOCK_DGRAM, IPPROTO_UDPLITE);
 
