@@ -111,9 +111,22 @@ The checksum data range is controlled via socket option `UDPLITE_SEND_CSCOV` and
 
 SCTP
 ----
+SCTP([RFC2960][8]) is a message-oriented transport protocol which supports reliable, in-sequence delivery with congestion control like TCP.
+SCTP-UDP([RFC6951][9]) defines a mechanism to run SCTP over UDP.
 
 DCCP
 ----
+
+DCCP([RFC4340][10]) is another message-oriented transport protocol, which supports congestion control.
+Unlike SCTP, delivery order is not guaranteed. The design goal is to support streaming data, i.e. optimized
+for latency over reliability. This protocol can also be used on top of UDP in order to provide general
+congestion contorl [DCCP-UDP][11] to application layer.
+
+features:
+-   __reliable connection setup/teardown__
+-   __negociation for congestion control mechanism__
+-   __support Explicit Congestion Notification__
+-   __support partial checksum like UDP-Lite__
 
 [1]: https://tools.ietf.org/html/rfc768
 [2]: https://tools.ietf.org/html/rfc2460
@@ -122,3 +135,7 @@ DCCP
 [5]: https://tools.ietf.org/html/rfc6936
 [6]: https://tools.ietf.org/html/rfc3828
 [7]: http://man7.org/linux/man-pages/man7/udplite.7.html
+[8]: https://tools.ietf.org/html/rfc2960
+[9]: https://tools.ietf.org/html/rfc6951
+[10]: https://tools.ietf.org/html/rfc4340
+[11]: https://tools.ietf.org/html/rfc6773
