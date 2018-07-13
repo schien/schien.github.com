@@ -111,8 +111,28 @@ The checksum data range is controlled via socket option `UDPLITE_SEND_CSCOV` and
 
 SCTP
 ----
-SCTP([RFC2960][8]) is a message-oriented transport protocol which supports reliable, in-sequence delivery with congestion control like TCP.
+SCTP([RFC2960][8]) is a message-oriented transport protocol which supports reliable, in-sequence delivery with congestion control like TCP. The design goal is to transmit signaling message reliablely.
+SCTP also defined message framing format so that application protocols doesn't need to define a token of message boundary like while using TCP.
 SCTP-UDP([RFC6951][9]) defines a mechanism to run SCTP over UDP.
+In current draft of WebRTC DataChannel ([RTCWEB-DATA][13]) it leverage SCTP in the protocol stack to provide reliable 
+
+features:
+-   __reliable connection setup/teardown__
+    4-way handshake is used to createa an association between two endpoints (a logical connection).
+-   __no head-of-line blocking__
+    support multiple data stream in one association. Message order is guaranteed inside a stream.
+    application data sent on a stream is divided into chucks, which allows interleaving chuncks on
+    different stream during transmission.
+-   __fregmentation in transport layer__
+    message is divided into chucks that can fit with the smallest size of MTU of all paths, to prevent IP fregmentation.
+-   __TCP-like flow control/congestion control__
+    use `rwnd` (receiver window size) to do flow control, `cwnd` (congestion window size) and slow start to do congestion control.
+-   __support Explicit Congestion Notification__
+-   __support multi-homing__
+    SCTP association can have multiple IP address.
+    SCTP will use alternative path for transmitting while failed to use the primary path
+-   __support configurable reliability__
+    [PR-SCTP][12] provides a mechanism to limit the number of retransmission.
 
 DCCP
 ----
@@ -139,3 +159,5 @@ features:
 [9]: https://tools.ietf.org/html/rfc6951
 [10]: https://tools.ietf.org/html/rfc4340
 [11]: https://tools.ietf.org/html/rfc6773
+[12]: https://tools.ietf.org/html/draft-ietf-tsvwg-sctp-prpolicies-06
+[13]: https://tools.ietf.org/html/draft-ietf-rtcweb-data-channel-13
