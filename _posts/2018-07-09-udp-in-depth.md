@@ -100,7 +100,7 @@ UDP-Lite
 
 UDP uses the entire datagram to calculate checksum and the datagram will be discard if validation failed.
 For UDP tunneling usecase, the tunneling protocol might defined their own data correction mechanism.
-Discarding the entire datagram will cancel the correction mechanism. Therefore, UDP-Lite [RFC3828][6] is
+Discarding the entire datagram will cancel the correction mechanism. Therefore, UDP-Lite ([RFC3828][6]) is
 introduced to allow application-specified data range for computing checksum.
 
 In POSIX Socket API, UDP-Lite socket can be create by specifying the [UDPLite][7] protocol id.
@@ -111,9 +111,9 @@ The checksum data range is controlled via socket option `UDPLITE_SEND_CSCOV` and
 
 SCTP
 ----
-SCTP([RFC2960][8]) is a message-oriented transport protocol which supports reliable, in-sequence delivery with congestion control like TCP. The design goal is to transmit signaling message reliablely.
+SCTP ([RFC2960][8]) is a message-oriented transport protocol which supports reliable, in-sequence delivery with congestion control like TCP. The design goal is to transmit signaling message reliablely.
 SCTP also defined message framing format so that application protocols doesn't need to define a token of message boundary like while using TCP.
-SCTP-UDP([RFC6951][9]) defines a mechanism to run SCTP over UDP.
+SCTP-UDP ([RFC6951][9]) defines a mechanism to run SCTP over UDP.
 In current draft of WebRTC DataChannel ([RTCWEB-DATA][13]) it leverage SCTP in the protocol stack to provide reliable 
 
 features:
@@ -132,15 +132,15 @@ features:
     SCTP association can have multiple IP address.
     SCTP will use alternative path for transmitting while failed to use the primary path
 -   __support configurable reliability__
-    [PR-SCTP][12] provides a mechanism to limit the number of retransmission.
+    Partially Reliable Stream Control Transmission Protocol extension ([PR-SCTP][12]) provides a mechanism to limit the number of retransmission.
 
 DCCP
 ----
 
-DCCP([RFC4340][10]) is another message-oriented transport protocol, which supports congestion control.
+DCCP ([RFC4340][10]) is another message-oriented transport protocol, which supports congestion control.
 Unlike SCTP, delivery order is not guaranteed. The design goal is to support streaming data, i.e. optimized
 for latency over reliability. This protocol can also be used on top of UDP in order to provide general
-congestion contorl [DCCP-UDP][11] to application layer.
+congestion contorl ([DCCP-UDP][11]) to application layer.
 
 features:
 -   __reliable connection setup/teardown__
