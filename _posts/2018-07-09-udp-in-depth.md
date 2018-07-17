@@ -160,7 +160,7 @@ This protocol can also be used on top of UDP in order to provide general congest
 DTLS
 ----
 
-DTLS ([RFC4347][14] for 1.0, [RFC6347][15] for 1.2) provides encrypted communication for datagram protocol.
+DTLS ([RFC4347][14] for 1.0 / [RFC6347][15] for 1.2) provides encrypted communication for datagram protocol.
 It is based on TLS ([RFC5246][18]) with necessary modification in order to run on unreliable transport channel (e.g. UDP).
 
 It defines three layers: Record layer for fregmentation, encryption, and compression; Handshake layer for exchanging encryption parameters; Alert layer for error handling
@@ -186,7 +186,7 @@ This protocol aggregates the benefit from several other protocols, such as HTTP2
 QUIC runs on top of UDP to reduce the burden of deploying protocol in the middlebox (which is the lesson learned from the IPv6 deployment).
 It is also implemented in userspace for easy use/update by application, without waiting for the upgrade from operating system provider (lesson learned from TCP new feature deployment).
 
-[comparison-quic-sctp][22] provides a detailed comparison on the design and feautures between QUIC and SCTP.
+[[comparison-quic-sctp][22]] provides a detailed comparison on the design and feautures between QUIC and SCTP.
 
 ### features:
 -   __reliable connection setup/teardown__:
