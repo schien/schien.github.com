@@ -16,6 +16,8 @@ The original RFC provides an implementation guideline with message format and co
 
 ### header format
 
+This is the header format defined in RFC793:
+
      0               8               16              24            31
     +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
     |           Source Port         |        Destination Port       |
@@ -24,42 +26,51 @@ The original RFC provides an implementation guideline with message format and co
     +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
     |                    Acknowledgement Number                     |
     +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-    |offset | rsv |  control bits   |           Window Size         |
+    |Offset | Reserved  | Ctrl Bits |           Window Size         |
     +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
     |             Checksum          |         Urgent Pointer        |
     +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+    |                    Options (if offset > 5)                    |
+    |                              ...                              |
+    +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
 
--   Source Port / Destination Port
+-   __Source Port / Destination Port__:
+    The pair of port number the source and destination endpoint.
 -   __Sequence number__:
+    The initial sequence number or the sequence number of the data depends on the SYN flag.
 -   __Acknowledgement number__:
+    The next expected sequence number if ACK is set.
 -   __Data offset__:
--   __Reserved__: reserved bits for new control bits in the future. Set to 0 for now.
+    The size of header in 32-bit words. The value can be between 5 and 15.
+-   __Reserved__:
+    Reserved for new control bits in the future. Must be zero.
 -   __Control bits__:
---    NS:
---    CWR:
---    ECE:
---    URG: set to `1` if urgent point is meaningful
---    ACK: set to `1` if acknowledgement number is meaningful
---    PSH: set to `1` to push the buffer to receiving application
---    RST: set to `1` to reset the connection
---    SYN: set to `1` to synchronoze the initial sequence number
---    FIN: set to `1` to close outgoing connection, no more data can be sent.
+  *    URG: set to `1` if urgent point is meaningful
+  *    ACK: set to `1` if acknowledgement number is meaningful
+  *    PSH: set to `1` to push the buffer to receiving application
+  *    RST: set to `1` to reset the connection
+  *    SYN: set to `1` to synchronoze the initial sequence number
+  *    FIN: set to `1` to close outgoing connection, no more data can be sent.
 -   __Window Size__:
+    Number of bytes of the receiver window, combined with the acknowledgement number it represents the last sequence number can be sent.
 -   __Checksume__:
+    The checksum value for verifying the data integrity of this segment.
 -   __Urgent Pointer__:
-sequence number
-acknoledgement number
-data offset
-control bits
-urgent data pointer
-optional
+    The offset of sequenc number that is following the urgent data, i.e. the next segment of normal data.
+-   __Options__:
+    The optional headers for TCP extensions. Options can have upto three fields, Option-Kind, Option-Length, Option-Data.
+    Zero padding is added to the end of option list to ensure 32-bit alignment.
+    MSS, Window scale, SACK, TCP timestamp is transmitted in this section.
 
 ### connection management
 
 TCB
 state transition
 connection setup
+The famous three-way handshake is used to transfer initial parameters 
 connection shutdown
+TCP supports half close, i.e. an endpoint can decide to stop sending any segment but keep receiving data.
+FIN flag is set on the outgoing segment as the last segment to transmit. 
 
 
 ### in-sequence delivery
@@ -130,8 +141,8 @@ CE flag is set when middlebox detecting impending congestion.
 Various congestion control algorithms are developed for different network environment and requirement, which can be found on [wikipedia][8].
 
 ### security consideration
-checksum
 
+The data integrity of a TCP segment is verified by checksum.
 The pseudo header format for calculating checksum is the same as the one for UDP.
 The only difference is the protocol number (0x06 for TCP)
 
@@ -171,9 +182,15 @@ For IPv6:
     |                      zero                     |Next Header (6)|
     +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
 
-message authenticity
-data integrity
-data encryption - TLS
+To ensure the message authenticity, i.e. this segment is sent by the source IP/port, TCP Authentication Option (TCP-AO, [RFC5925][16])
+is used by long lived connection between routers. By carrying a MAC valid along with each TCP segment, receiver is able to verify the
+message with the shared key among routers.
+
+The data sent over TCP connection is plain text. To provide end-to-end data encryption, one common approach is to run TLS over TCP.
+TLS ([RFC5246][16]) defines the key exchange procedure and data encryption, therefore the application data will first be encrypted by TLS,
+then transmit with TCP segments. TLS provides message authenticity and integrity as well.
+The other approach is using IPsec protocols ([RFC4301][17]) to do data encryption on IP packet and the TCP segment will be encrypted as well.
+It requires additional network configuration in OS-level to enable IPsec.
 
 ### performance consideration
 
@@ -182,16 +199,17 @@ becomes the performance bottle neck (65535 bytes at most in one RTT).
 [RFC1323][9] introduce the window scaling extension, provide a `shift` value of the `Window` field. The maximum `shift`
 value is 14, which increase the window size to 2^30 = 1 Gbytes.
 
-packet utilization, The Nagle algorithm described in RFC1122 Section 4.2.3.4 provides a solution to send larger packet
-by delay sending the fregment.
+Sending small data in one TCP segment is bad for bandwidth utilization.
+The Nagle algorithm described in [RFC896][15] provides a solution to send larger packet
+by delay sending. Small data generated within 1 RTT is aggregated into one TCP segment.
 
 The original version of congestion control use one SMSS as the initial window size, which is too small as the network
 bandwith increases. It was increased to 2 in [RFC2414][10] , to 4 in [RFC3390][11], and to 10 in [RFC6928][12].
 This will decrease the number of RTT required to pass slow start phase.
 
 Various researches try to resolve the slowness of slow start mechanism by probing/guessing/predicting a better initial `cwnd`
-[Fast Start][] [Jump Start][] [Quick Start][]
-However there is no one can generally replace the slow start based on the experiment result.
+e.g. [Fast Start][20] [Jump Start][19] [Quick Start][18]
+However there is no one can generally replace the slow start based on the [experiment result][21].
 
 One common performance issue while using TCP is the initial delay for the three-way handshake procedure, which means 1.5 RTT is
 required for server to receive the first byte of data. Therefore, creating a long-lived TCP connection seems a good approach
@@ -202,8 +220,12 @@ Another approach to reduce the delay is to carry the application data along with
 mechanism is called TCP Fast Open ([TFO][13]). However there are still security issues and deployment issues requires to be
 fixed before it can be widely used.
 
-multipath
-[RFC6824][14]
+The original design of TCP connection is bounded to single network interface. It can only send and receive data from one
+interface once created. Therefore it cannot fully utilize all the network bandwidth available on that machine.
+For mobile device, the internet connection can switch between mobile network or Wi-Fi while moving. The application
+needs to create a new TCP connection after network change since the previous one will be closed or timeout.
+Multipath TCP ([RFC6824][14]) is introduced to bind/unbind additional network interface on one TCP connection and handover
+between interfaces. A subflow system is added to transmit data on multiple interface simontaneously for one MPTCP socket.
 
 [1]: https://tools.ietf.org/html/rfc793
 [2]: https://tools.ietf.org/html/rfc1122
@@ -219,4 +241,10 @@ multipath
 [12]: https://tools.ietf.org/html/rfc6928
 [13]: https://tools.ietf.org/html/rfc7413
 [14]: https://tools.ietf.org/html/rfc6824
-
+[15]: https://tools.ietf.org/html/rfc896
+[16]: https://tools.ietf.org/html/rfc5246
+[17]: https://tools.ietf.org/html/rfc4301
+[18]: https://tools.ietf.org/html/rfc4782
+[19]: http://www.icir.org/mallman/papers/jumpstart-pfldnet07.pdf
+[20]: https://www.microsoft.com/en-us/research/publication/tcp-fast-start-a-technique-for-speeding-up-web-transfers/
+[21]: http://www.ietf.org/proceedings/73/slides/iccrg-2.pdf
