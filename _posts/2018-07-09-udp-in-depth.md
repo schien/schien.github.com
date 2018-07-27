@@ -5,6 +5,8 @@ date:   2018-07-09 19:24:37 +0800
 categories: networking
 ---
 
+This document provides a detailed study of UDP protocol and a list of datagram protocols that can be used with or replaced UDP.
+
 UDP
 ---
 
@@ -114,11 +116,13 @@ SCTP
 SCTP ([RFC2960][8]) is a message-oriented transport protocol which supports reliable, in-sequence delivery with congestion control like TCP. The design goal is to transmit signaling message reliablely.
 SCTP also defined message framing format so that application protocols doesn't need to define a token of message boundary like while using TCP.
 SCTP-UDP ([RFC6951][9]) defines a mechanism to run SCTP over UDP.
-In current draft of WebRTC DataChannel ([RTCWEB-DATA][13]) it leverage SCTP in the protocol stack to provide reliable 
+
+In current draft of WebRTC DataChannel ([RTCWEB-DATA][13]) it leverage SCTP in the protocol stack to provide configurable, reliable transport on top of DTLS. 
 
 ### features:
 -   __reliable connection setup/teardown__:
     4-way handshake is used to createa an association between two endpoints (a logical connection).
+    Application data can start to be sent with the third and fourth handshake messages.
 -   __no head-of-line blocking__:
     Support multiple data stream in one association. Message order is guaranteed inside a stream.
     application data sent on a stream is divided into chucks, which allows interleaving chuncks on
@@ -128,9 +132,10 @@ In current draft of WebRTC DataChannel ([RTCWEB-DATA][13]) it leverage SCTP in t
 -   __TCP-like flow control/congestion control__:
     Use `rwnd` (receiver window size) to do flow control, `cwnd` (congestion window size) and slow start to do congestion control.
 -   __support Explicit Congestion Notification__:
--   __support multi-homing__
+    ECN ([RFC3168][21]) provides congestion notification by middlebox in IP layer. SCTP will use this information to adjust the congestion window as well.
+-   __support multi-homing__:
     SCTP association can have multiple IP address.
-    SCTP will use alternative path for transmitting while failed to use the primary path
+    SCTP will use alternative path for transmitting while failed to use the primary path.
 -   __support configurable reliability__:
     Partially Reliable Stream Control Transmission Protocol extension ([PR-SCTP][12]) provides a mechanism to limit the number of retransmission.
 
@@ -138,22 +143,27 @@ DCCP
 ----
 
 DCCP ([RFC4340][10]) is another message-oriented transport protocol, which supports congestion control.
-Unlike SCTP, delivery order is not guaranteed. The design goal is to support streaming data, i.e. optimized
-for latency over reliability. This protocol can also be used on top of UDP in order to provide general
-congestion contorl ([DCCP-UDP][11]) to application layer.
+Unlike SCTP, delivery order is not guaranteed.
+The design goal is to support streaming data, i.e. optimized for latency over reliability.
+This protocol can also be used on top of UDP in order to provide general congestion contorl ([DCCP-UDP][11]) to application layer.
 
 ### features:
--   __reliable connection setup/teardown__
--   __negociation for congestion control mechanism__
+-   __reliable connection setup/teardown__:
+    DCCP uses 3-way handshake like TCP, and application data can be appended to the handshake message.
+-   __negociation for congestion control mechanism__:
+    DCCP defines a TCP-like congestion control (send as much as possible) and a TCP-friendly rate control (provide smooth sending rat) for different usecase.
 -   __support Explicit Congestion Notification__
--   __support partial checksum like UDP-Lite__
+-   __support partial checksum like UDP-Lite__:
+    DCCP allows application-defined checksume coverage. However, checksume is disabled while using DCCP over UDP,
+    since checksum for UDP datagram already protect the DCCP payload.
 
 DTLS
 ----
 
-DTLS ([RFC4347][14] for 1.0, [RFC6347][15] for 1.2) provides encrypted communication for datagram protocol.
-It is based on TLS with necessary modification in order to run on unreliable transport channel (e.g. UDP).
-It defines two layers: Record layer for fregmentation, encryption, and compression; Handshake layer for exchanging encryption parameters.
+DTLS ([RFC4347][14] for 1.0 / [RFC6347][15] for 1.2) provides encrypted communication for datagram protocol.
+It is based on TLS ([RFC5246][18]) with necessary modification in order to run on unreliable transport channel (e.g. UDP).
+
+It defines three layers: Record layer for fregmentation, encryption, and compression; Handshake layer for exchanging encryption parameters; Alert layer for error handling
 Fragmentation and retrasmission timer is used solely for handshake message, no explicit flow control / congestion control on DTLS channel.
 
 ### differences to TLS:
@@ -165,6 +175,40 @@ Fragmentation and retrasmission timer is used solely for handshake message, no e
     Unlike TLS, the sequence number of DTLS Record is not encrypted to detect reordered message. `epoch` is increased each time when cipher state is changed (i.e. `ChangeCipherSpec` is sent). Endpoint should discard messages with epoch less than current one. Sequence number is reset to 0 every time `epoch` is changed.
 -   __fregment handshake message__:
     Large handshake message will be splited into multiple records that is smaller than PMTU. Sender will retransmit entire message if no response is received before timeout.
+
+QUIC
+----
+
+QUIC ([quic-transport][16]) is a new transport protocol under development/standardization.
+The goal is to provide a reliable, encrypted, in-sequence delivery, stream-based channel.
+
+This protocol aggregates the benefit from several other protocols, such as HTTP2 ([RFC7540][17]), SCTP, and TLS.
+QUIC runs on top of UDP to reduce the burden of deploying protocol in the middlebox (which is the lesson learned from the IPv6 deployment).
+It is also implemented in userspace for easy use/update by application, without waiting for the upgrade from operating system provider (lesson learned from TCP new feature deployment).
+
+[[comparison-quic-sctp][22]] provides a detailed comparison on the design and feautures between QUIC and SCTP.
+
+### features:
+-   __reliable connection setup/teardown__:
+    The 1-RTT scenario for QUIC is similar to SCTP 4-way handshake, a token is created and sent back by server for verification. The 0-RTT scenario is achieved by preserving a token generated by server for future connection.
+    QUIC supports both bidirectional and unidirectional stream for transmitting data.
+-   __no head-of-line blocking__:
+    Like HTTP2 and SCTP, A QUIC connection consists multiple streams that allows interleaving data delivery, thus avoid the head-of-line blocking of while using TCP.
+-   __in-sequence delivery__:
+    Byte-offset information is included in the application data frame to recontruct the byte stream.
+-   __segmentation__:
+    QUIC transport handles PMTU discovery, segments control messages and application data into appropriate packet size to prevent IP fragmentation.
+-   __encrypted__:
+    QUIC integrates the cryptographic parameter handshake procedure from TLS. The data delivered through QUIC is always encrypted.
+-   __flow control/congestion control__:
+    The flow control is done on both connection level and stream level. A TCP-like congestion control with modification is employed on QUIC ([quic-recovery][20]).
+-   __support 0-RTT__:
+    QUIC borrows the 0-RTT concept from TLS 1.3, therefore it can reduce one more RTT comparing to TLS over TCP.
+-   __support Explicit Congestion Notification__
+-   __support Connection Migration__:
+    QUIC connection is identified by a connection ID instead of `(IP, port)` tuple.
+    A path verification procedure is introduced to while detecting the change of `(IP, port)`.
+    An extension for supporting multipath delivery [quic-multipath][19] is under development to provide bandwith aggregation and seamless handover for multihoming device (e.g. cellphone connected to 4G network and Wi-Fi).
 
 [1]: https://tools.ietf.org/html/rfc768
 [2]: https://tools.ietf.org/html/rfc2460
@@ -181,3 +225,10 @@ Fragmentation and retrasmission timer is used solely for handshake message, no e
 [13]: https://tools.ietf.org/html/draft-ietf-rtcweb-data-channel-13
 [14]: https://tools.ietf.org/html/rfc4347
 [15]: https://tools.ietf.org/html/rfc6347
+[16]: https://tools.ietf.org/html/draft-ietf-quic-transport-13
+[17]: https://tools.ietf.org/html/rfc7540
+[18]: https://tools.ietf.org/html/rfc5246
+[19]: https://tools.ietf.org/html/draft-deconinck-quic-multipath-00
+[20]: https://tools.ietf.org/html/draft-ietf-quic-recovery-13
+[21]: https://tools.ietf.org/html/rfc3168
+[22]: https://tools.ietf.org/html/draft-joseph-quic-comparison-quic-sctp-00
