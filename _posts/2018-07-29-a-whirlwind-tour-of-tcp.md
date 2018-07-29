@@ -1,20 +1,20 @@
 ---
 layout: post
-title: "A Whirlwind tour of TCP"
-date:   2018-07-24 14:58:33 +0800
+title: "A Whirlwind Tour of TCP"
+date:   2018-07-29 23:55:33 +0800
 categories: networking
 ---
 
 TCP
 ---
 
-TCP [RFC793][1] is a transport protocol for reliable, in-sequence delivery.
+TCP ([RFC793][1]) is a transport protocol for reliable, in-sequence delivery.
 It provides a bidirectional byte stream transmission between endpoints across Internet.
 The original RFC provides an implementation guideline with message format and connection states defined.
 [RFC1122][2] provides more formal regulation and bugfix based on the observation of the deployment.
 [RFC7414][3] provides an historical overview of the TCP development.
 
-### header format
+### Header Format
 
 This is the header format defined in RFC793:
 
@@ -45,66 +45,96 @@ This is the header format defined in RFC793:
 -   __Reserved__:
     Reserved for new control bits in the future. Must be zero.
 -   __Control bits__:
-  *    URG: set to `1` if urgent point is meaningful
-  *    ACK: set to `1` if acknowledgement number is meaningful
-  *    PSH: set to `1` to push the buffer to receiving application
-  *    RST: set to `1` to reset the connection
-  *    SYN: set to `1` to synchronoze the initial sequence number
-  *    FIN: set to `1` to close outgoing connection, no more data can be sent.
+    -    URG: set to `1` if urgent point is meaningful
+    -    ACK: set to `1` if acknowledgement number is meaningful
+    -    PSH: set to `1` to push the buffer to receiving application
+    -    RST: set to `1` to reset the connection
+    -    SYN: set to `1` to synchronoze the initial sequence number
+    -    FIN: set to `1` to close outgoing connection, no more data can be sent.
 -   __Window Size__:
-    Number of bytes of the receiver window, combined with the acknowledgement number it represents the last sequence number can be sent.
+    Number of bytes of the receiver window, combined with the acknowledgement number it
+    represents the last sequence number can be sent.
 -   __Checksume__:
     The checksum value for verifying the data integrity of this segment.
 -   __Urgent Pointer__:
     The offset of sequenc number that is following the urgent data, i.e. the next segment of normal data.
 -   __Options__:
-    The optional headers for TCP extensions. Options can have upto three fields, Option-Kind, Option-Length, Option-Data.
+    The optional headers for TCP extensions. Options can have upto three fields,
+    _Option-Kind_, _Option-Length_, _Option-Data_.
     Zero padding is added to the end of option list to ensure 32-bit alignment.
     MSS, Window scale, SACK, TCP timestamp is transmitted in this section.
 
-### connection management
+### Connection Management
 
-TCB
-state transition
-connection setup
-The famous three-way handshake is used to transfer initial parameters 
-connection shutdown
+Transmission Control Block (TCB) defined in RFC793 section 3.2 represents a list of parameters
+and states for maintaining a TCP connection, mainly for maintaining the sliding window on both
+incoming and outgoing data.
+
+<div style="text-align:center" markdown="1">
+!["relationship between TCB and buffer"]({{ site.url }}/asset/img/TCB.png)
+</div>
+
+The famous three-way handshake is used to transfer initial parameters including initial sequence number, MSS, etc.
+It consists of four steps:
+1. A sends initial sequence number to B
+2. B acknowledges the initial sequence number to A
+3. B sends initial sequence number to A
+4. A acknowledges the initial sequence number to B
+One TCP segment is used for step 2 and 3 since the SYN and ACK are store independently in the header.
+The endpoint A, which is the client, will enter `ESTABLISHED` state at step 3 and can start sending outgoing data.
+The endpoint B, which is the server, will enter `ESTABLISHED` state after step 4.
+
 TCP supports half close, i.e. an endpoint can decide to stop sending any segment but keep receiving data.
-FIN flag is set on the outgoing segment as the last segment to transmit. 
+FIN flag is set on the outgoing segment as the last segment to transmit.
+Upon the corresponding ACK is received, that half connection will be closed completely.
+
+Before destroying the TCB after connection close, it must wait upto 4 minutes to ensure all unarrived
+will be clean up before new TCB is created on that port. This is to prevent old TCP segment pollute
+the sequnce number space of the new TCB.
 
 
-### in-sequence delivery
+### In-sequence Delivery
 
 The sequence number represents the relative offset of the first octet of the data carried by this TCP segment.
 Upon receiving new data, an acknoledgement should be generated with the sequence number of next expected octet.
-A delayed ACK mechanism is used to reduced the number of ACKs sent and piggyback with the response data, see RFC1122 section 4.2.3.2.
+A delayed ACK mechanism is used to reduced the number of ACKs sent and piggyback with the response data,
+see RFC1122 section 4.2.3.2.
 TCP optionally support selective acknoledgement (SACK, [RFC2018][5]) for better detecting multiple packet lost.
 
 Since the data is delivered inorderly, receiver can only consume a byte until all the bytes before it are received.
 (Imaging the server is trying to send a warning of nuclear bomb explosion while you are downloading a 4GB movie from it.)
 Urgent data is designed to transport out-of-band message, which allow high-priority control message to be delivered
 during the transmission of regular data.
+
 However the current best practice is against the use of TCP urgent mechanism [RFC6093][4] due to various design and implementation issues.
 One naive way is create additional TCP connection for the event notification but it consumes additional server resources.
 The other way is to create an application protocol that multiplex multiple streams onto single TCP connection, e.g. HTTP2.
 
-### flow control
+### Flow Control
 
-TCP endpoint needs to store the received but not-yet-consumed data in a buffer called sliding window, which represents a slice
-of the byte stream. There is no point for a sender to transmit more data if the buffer in receiver is full.
-The `Window` field in combined with the `Acknoledgement Number` represents the last index of octet that receiver will accept.
-Receiver updates the `Window` field to trigger sender sending more data. However, advancing window boundary with small increment
-will cause small segment of data to be sent, which decrease the network efficiency (packet overhead, more ACK).
-In combined with the delayed ACK mechanism, a SWS avoidance algorithm is introduced in RFC1122 section 4.2.3.3. The idea is to
-update the window boundary after the size of unadvertised buffer space is less than MSS or the low watermark of receiving buffer.
+TCP endpoint needs to store the received but not-yet-consumed data in a buffer called sliding window,
+which represents a slice of the byte stream.
+There is no point for a sender to transmit more data if the buffer in receiver is full.
+The `Window` field in combined with the `Acknoledgement Number` represents the last index of octet
+that receiver will accept.
+Receiver updates the `Window` field to trigger sender sending more data.
 
-The window update packet might be lost in the network. The sender should perform window probing after `rwnd` reaches zero for sometime.
-A packet with one byte of data is sent. Receiver will consume this one-byte data if window is avaialble and ACK normally. Receiver must
-send an ACK even if the current window is zero, this ACK should contains the next expected sequence number with `0` window.
-This probing should start after the retransmission timeout after `rwnd` down to 0, RFC1122 suggest that the timeout value should increase
-exponentially for consecutive probing.
+However, advancing window boundary with small increment will cause small segment of data to be sent,
+which decrease the network efficiency (packet overhead, more ACK).
+In combined with the delayed ACK mechanism, a SWS avoidance algorithm is introduced in RFC1122 section 4.2.3.3.
+The idea is to update the window boundary after the size of unadvertised buffer space is less
+than MSS or the low watermark of receiving buffer.
 
-### congestion control
+The window update packet might be lost in the network.
+The sender should perform window probing after `rwnd` reaches zero for sometime.
+A packet with one byte of data is sent.
+Receiver will consume this one-byte data if window is avaialble and ACK normally.
+Receiver must send an ACK even if the current window is zero,
+this ACK should contains the next expected sequence number with `0` window.
+This probing should start after the retransmission timeout after `rwnd` down to 0,
+RFC1122 suggest that the timeout value should increase exponentially for consecutive probing.
+
+### Congestion Control
 
 The middleboxes (router, proxy, firewall, etc) along the routing path also have buffering issues and the buffer is
 shared among all the packet flows go pass the node. Sending packets in a burst is more likely to fill the buffer of the middlebox
@@ -112,6 +142,7 @@ and causes packet drop/retrasmission. This is bad for throughput by increasing d
 
 TCP maintains a congestion window `cwnd` as a sweet spot for sending as many data as possible without jamming the network.
 The congestion window is dynamcially adjusted during the lifetime of the TCP connection.
+
 Two phases is used:
 1.  __slow start__:
     Starting with the inital window size ( 1 segment in RFC2001 ), grow the `cwnd` exponentially by increasing 1 everytime receiving
@@ -133,14 +164,14 @@ to congestion avoidance by setting `ssthresh` to the half of `cwnd` and change t
 The latest algorithm in [RFC5681][6] further tweak the `ssthresh` and `cwnd` value by considering the number of data that is sent before
 fast retrasmission happend.
 
-ECN [RFC3168][7] is introduced to notify packet drop in the middlebox via IP layer. Two control bits `ECE` and `CWR` are introduced in the
+ECN ([RFC3168][7]) is introduced to notify packet drop in the middlebox via IP layer. Two control bits `ECE` and `CWR` are introduced in the
 TCP header. While reciever get Congestion Experienced (CE) notification from IP layer, `ECE` flag is on for every following outgoing packet
 until `CWR` bit is observed in the incoming packet. This feedback mechanism help reduce the congestion window before packet drop since the
 CE flag is set when middlebox detecting impending congestion.
 
 Various congestion control algorithms are developed for different network environment and requirement, which can be found on [wikipedia][8].
 
-### security consideration
+### Security Consideration
 
 The data integrity of a TCP segment is verified by checksum.
 The pseudo header format for calculating checksum is the same as the one for UDP.
@@ -192,11 +223,11 @@ then transmit with TCP segments. TLS provides message authenticity and integrity
 The other approach is using IPsec protocols ([RFC4301][17]) to do data encryption on IP packet and the TCP segment will be encrypted as well.
 It requires additional network configuration in OS-level to enable IPsec.
 
-### performance consideration
+### Performance Consideration
 
 With the increasing of available memory on network device and the network bandwith, the `Window` value in TCP header
 becomes the performance bottle neck (65535 bytes at most in one RTT).
-[RFC1323][9] introduce the window scaling extension, provide a `shift` value of the `Window` field. The maximum `shift`
+[RFC1323][9] introduces the window scaling extension, provide a `shift` value of the `Window` field. The maximum `shift`
 value is 14, which increase the window size to 2^30 = 1 Gbytes.
 
 Sending small data in one TCP segment is bad for bandwidth utilization.
@@ -204,11 +235,11 @@ The Nagle algorithm described in [RFC896][15] provides a solution to send larger
 by delay sending. Small data generated within 1 RTT is aggregated into one TCP segment.
 
 The original version of congestion control use one SMSS as the initial window size, which is too small as the network
-bandwith increases. It was increased to 2 in [RFC2414][10] , to 4 in [RFC3390][11], and to 10 in [RFC6928][12].
+bandwith increases. It was increased to 2 in [RFC2414][10], to 4 in [RFC3390][11], and to 10 in [RFC6928][12].
 This will decrease the number of RTT required to pass slow start phase.
 
 Various researches try to resolve the slowness of slow start mechanism by probing/guessing/predicting a better initial `cwnd`
-e.g. [Fast Start][20] [Jump Start][19] [Quick Start][18]
+e.g. [Fast Start][20], [Jump Start][19], [Quick Start][18]
 However there is no one can generally replace the slow start based on the [experiment result][21].
 
 One common performance issue while using TCP is the initial delay for the three-way handshake procedure, which means 1.5 RTT is
